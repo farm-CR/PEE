@@ -2,6 +2,7 @@ library(tidyverse)
 library(readr)
 library(MatchIt)
 library(fixest)
+library(betareg)
 
 #Dados ----
 
@@ -37,10 +38,10 @@ df <- df_original %>%
     ))
   ) 
 
-#Análise descritiva ----
+#An?lise descritiva ----
 
 df %>% 
-  filter(faixa_etaria != "Inválido") %>% 
+  filter(faixa_etaria != "Inv?lido") %>% 
   group_by(ano, turno, faixa_etaria) %>% 
   summarize(aptos = sum(aptos), comparecimento = sum(comparecimento)) %>% 
   mutate(comparecimento = comparecimento/aptos,
@@ -82,10 +83,10 @@ df.match <- matchit(modelo.psm, data=df.psm, link="probit", replace = T) %>%
   select(id_municipio, id_municipio_unico) %>% 
   left_join(df %>% filter(turno == 2))
 
-#Regressão ----
+#Regress?o ----
 
 df.reg <- df.match %>% 
-  filter(faixa_etaria != "Inválido", faixa_etaria != "100 anos ou mais") %>% 
+  filter(faixa_etaria != "Inv?lido", faixa_etaria != "100 anos ou mais") %>% 
   mutate(tx_comparecimento = comparecimento / aptos,
          faixa_etaria = str_replace_all(faixa_etaria, " ", "_"),
          faixa_etaria = str_c("i", faixa_etaria)) %>% 
@@ -93,13 +94,23 @@ df.reg <- df.match %>%
   pivot_wider(names_from = faixa_etaria, 
               values_from = tx_comparecimento,
               id_cols = c(ano, turno, id_municipio, passe_livre),
-              values_fn = {sum}) %>% 
+              values_fn = {mean}) %>% 
   mutate(across(!c(id_municipio, passe_livre, turno, ano), ~ . - i65_a_69_anos))
 
-feols(i60_a_64_anos ~ passe_livre | ano + id_municipio, data = df.reg) %>% 
+feols(i60_a_64_anos ~ passe_livre | id_municipio + ano, data = df.reg) %>% 
   summary(.)
 
 feols(i55_a_59_anos ~ passe_livre | ano + id_municipio, data = df.reg) %>% 
   summary(.)
 
+df.reg <- df.match %>% 
+  filter(faixa_etaria != "InvÃ¡lido", faixa_etaria != "100 anos ou mais") %>% 
+  mutate(tx_comparecimento = comparecimento / aptos,
+         faixa_etaria = as_factor(str_replace_all(faixa_etaria, " ", "_")),
+         faixa_etaria = relevel(faixa_etaria, ref = 12)) %>% 
+  select(ano, id_municipio, turno, passe_livre, faixa_etaria, tx_comparecimento)
 
+
+feols(tx_comparecimento ~ passe_livre * faixa_etaria | id_municipio + ano, 
+      data = df.reg) %>% 
+  summary(.)

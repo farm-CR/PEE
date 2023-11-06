@@ -49,8 +49,7 @@ def resultado():
                 with zip_ref.open(nome_arquivo) as csv_file:
                     (
                         pd.read_csv(
-                            csv_file, encoding = "latin", sep = ";",
-                            usecols = ["ANO_ELEICAO", "NR_TURNO", "CD_MUNICIPIO", "SG_UF", "DS_CARGO", "DS_SIT_TOT_TURNO", "QT_VOTOS_NOMINAIS"])
+                            csv_file, encoding = "latin", sep = ";")
                         .query("NR_TURNO == 2 and DS_CARGO == 'Presidente' and SG_UF != 'ZZ'")
                         .to_csv(path_dados, index=False)
                     )
