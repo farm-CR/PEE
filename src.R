@@ -86,26 +86,20 @@ df.match <- matchit(modelo.psm, data=df.psm, link="probit", replace = T) %>%
 
 df.reg <- df.match %>% 
   filter(faixa_etaria != "Inválido", faixa_etaria != "100 anos ou mais") %>% 
-  mutate(tx_abstencao = abstencoes / aptos) %>% 
-  select(id_municipio_unico, passe_livre, faixa_etaria, tx_abstencao) %>% 
-  pivot_wider(names_from = faixa_etaria, values_from = tx_abstencao) %>% 
-  mutate(across(!c(id_municipio_unico, passe_livre), ~ . - `65 a 69 anos`))
-
-df.reg <- df %>% 
-  filter(faixa_etaria != "Inválido", faixa_etaria != "100 anos ou mais") %>% 
   mutate(tx_comparecimento = comparecimento / aptos,
-         faixa_etaria = str_replace(faixa_etaria, " ", "_")) %>% 
-  select(id_municipio , passe_livre, faixa_etaria, tx_comparecimento) %>% 
-  pivot_wider(names_from = faixa_etaria, values_from = tx_comparecimento) %>% 
-  mutate(across(!c(id_municipio, passe_livre), ~ . - `65 a 69 anos`))
+         faixa_etaria = str_replace_all(faixa_etaria, " ", "_"),
+         faixa_etaria = str_c("i", faixa_etaria)) %>% 
+  select(ano, id_municipio, turno, passe_livre, faixa_etaria, tx_comparecimento) %>% 
+  pivot_wider(names_from = faixa_etaria, 
+              values_from = tx_comparecimento,
+              id_cols = c(ano, turno, id_municipio, passe_livre),
+              values_fn = {sum}) %>% 
+  mutate(across(!c(id_municipio, passe_livre, turno, ano), ~ . - i65_a_69_anos))
 
-modelo.feols <- i60_a_64_anos ~ passe_livre | ano + id_municipio
-
-
-feols(modelo.feols, data = df.reg) %>% 
+feols(i60_a_64_anos ~ passe_livre | ano + id_municipio, data = df.reg) %>% 
   summary(.)
 
-lm(`55 a 59 anos` ~ passe_livre, data = df.reg) %>% 
+feols(i55_a_59_anos ~ passe_livre | ano + id_municipio, data = df.reg) %>% 
   summary(.)
 
 
