@@ -1,6 +1,7 @@
 library(tidyverse)
 library(sf)
 
+#Mapa dos grupos de município ----
 df <- read.csv("dados/passe_livre.csv") %>% 
   mutate(id_municipio = as.character(id_municipio)) %>% 
   left_join(df.rm.idd %>% 
@@ -15,7 +16,6 @@ data <- left_join(municipios, df) %>%
                        ifelse(area_metrop == 1, "Área Metropolitana", 
                               ifelse((passe_livre == 1), "Passe Livre Fora da Análise", "Fora da Análise"))))
 
-#Mapa dos grupos de município
 ggplot() +
   geom_sf(data = data %>% filter(turno == 2), 
           aes(fill = factor(fill)), color = NA) +
@@ -27,3 +27,23 @@ ggplot() +
   theme_void()
 
 ggsave("output/mapa.png", dpi = 1200, width = 10, height = 10)
+
+#Pirâmide Etária ----
+
+df <- read.csv("output/data.csv")
+
+df %>% 
+  filter(faixa_etaria != "Inválido", ano == 2022) %>% 
+  group_by(ano, turno, faixa_etaria) %>% 
+  summarize(aptos = sum(aptos), comparecimento = sum(comparecimento)) %>% 
+  mutate(comparecimento = comparecimento/aptos,
+         comparecimento = ifelse(turno == 1, -comparecimento, comparecimento)) %>% 
+  ggplot(aes(x = faixa_etaria, y = comparecimento, fill = factor(turno))) +
+  geom_col() +
+  coord_flip() +
+  facet_wrap(~ano) +
+  scale_y_continuous(labels = scales::percent_format(),
+                     breaks = c(0, 0.25, .5, .75, -0.25, -.5, -.75)) +
+  labs(x = "", y = "Comparecimento", fill = "Turno") 
+
+ggsave("output/piramide.png", dpi = 600, height = 4, width = 5)

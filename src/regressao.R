@@ -45,24 +45,6 @@ df <- df_original %>%
   ) %>% 
   left_join(read.csv("output/data.csv"))
 
-#An?lise descritiva ----
-
-df %>% 
-  filter(faixa_etaria != "Inv?lido") %>% 
-  group_by(ano, turno, faixa_etaria) %>% 
-  summarize(aptos = sum(aptos), comparecimento = sum(comparecimento)) %>% 
-  mutate(comparecimento = comparecimento/aptos,
-         comparecimento = ifelse(turno == 1, -comparecimento, comparecimento)) %>% 
-  ggplot(aes(x = faixa_etaria, y = comparecimento, fill = factor(turno))) +
-  geom_col() +
-  # geom_hline(yintercept = -0.8371519, linetype = "dashed") +
-  # geom_hline(yintercept = 0.8470657, linetype = "dashed") +
-  coord_flip() +
-  facet_wrap(~ano) +
-  labs(x = "", y = "Comparecimento", fill = "Turno") 
-
-ggsave("output/piramide.png", dpi = 600, height = 4, width = 5)
-
 write.csv(df, "output/data.csv")
 
 df2 <- read.csv("output/__data.csv")
