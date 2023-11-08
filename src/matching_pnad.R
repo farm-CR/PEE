@@ -6,6 +6,12 @@ library(fixest)
 load("dados/df_rm_idd.RData")
 load("dados/comparecimento.RData")
 
+pnad_uf <- bind_rows(list(
+  read_csv("dados/pnad/uf2022_3.csv"),
+  read_csv("dados/pnad/uf2018_3.csv"),
+  read_csv("dados/pnad/uf2014_3.csv")
+))
+
 df <- df %>% 
   filter(faixa_etaria != "100 anos ou mais" & faixa_etaria != "Inválido",
          turno == 2) %>% 

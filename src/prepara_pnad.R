@@ -3,9 +3,8 @@ library(PNADcIBGE)
 library(survey)
 
 save_pnad <- function(ano){
-  df.original <- PNADcIBGE::read_pnadc(microdata = sprintf("dados/ignore/pnad/%s_3.txt", ano),
-                                       input_txt = "dados/ignore/pnad/input.txt")
-  df <- df.original %>% 
+  df <- PNADcIBGE::read_pnadc(microdata = sprintf("dados/ignore/pnad/%s_3.txt", ano),
+                                       input_txt = "dados/ignore/pnad/input.txt") %>% 
     #Seleção das perguntas
     select(uf = UF,
            pesos = V1028,
@@ -17,11 +16,13 @@ save_pnad <- function(ano){
            ensino_medio = VD3004,
            ocupacao = VD4008,
            salario = VD4019,
-           motivo_indisp_14 = VD4023,
-           motivo_indisp = VD4030,
+           motivo_indisp_pre = VD4023,
+           motivo_indisp_pos = VD4030,
            horas_trabalho = VD4031) %>% 
     mutate(across(everything(), as.integer),
-           ano = ano) %>% 
+           ano = ano,
+           #Pergunta do motivo muda em 2015
+           motivo_indisp = ifelse(is.na(motivo_indisp_pre), motivo_indisp_pos, motivo_indisp_pre)) %>% 
     #Transformação das variáveis em dummies
     mutate(analfabeto = ifelse(analfabeto == 1, 0, ifelse(analfabeto == 2, 1, NA)),
            trabalha = ifelse(trabalha == 1, 1, ifelse(trabalha == 2, 0, NA)),
@@ -34,11 +35,11 @@ save_pnad <- function(ano){
            setor_empregador = ifelse(ocupacao == 4, 1, ifelse(is.na(ocupacao), NA, 0)),
            setor_conta_propria = ifelse(ocupacao == 5, 1, ifelse(is.na(ocupacao), NA, 0)),
            setor_auxiliar_familiar = ifelse(ocupacao == 6, 1, ifelse(is.na(ocupacao), NA, 0)),
-           motivo_dependente = ifelse((motivo_indisp == 1 | motivo_indisp_14 == 1), 1, ifelse((is.na(motivo_indisp) & is.na(motivo_indisp_14)), NA, 0)),
-           motivo_estudo = ifelse((motivo_indisp == 2 | motivo_indisp_14 == 2), 1, ifelse((is.na(motivo_indisp) & is.na(motivo_indisp_14)), NA, 0)),
-           motivo_pcd = ifelse((motivo_indisp == 3 | motivo_indisp_14 == 3), 1, ifelse((is.na(motivo_indisp) & is.na(motivo_indisp_14)), NA, 0)),
-           motivo_idade = ifelse((motivo_indisp == 4 | motivo_indisp_14 == 4), 1, ifelse((is.na(motivo_indisp) & is.na(motivo_indisp_14)), NA, 0)),
-           motivo_vontade = ifelse((motivo_indisp == 5 | motivo_indisp_14 == 5), 1, ifelse((is.na(motivo_indisp) & is.na(motivo_indisp_14)), NA, 0))) %>% 
+           motivo_dependente = ifelse(motivo_indisp == 1, 1, ifelse(is.na(motivo_indisp), NA, 0)),
+           motivo_estudo = ifelse(motivo_indisp == 2, 1, ifelse(is.na(motivo_indisp), NA, 0)),
+           motivo_pcd = ifelse(motivo_indisp == 3, 1, ifelse(is.na(motivo_indisp), NA, 0)),
+           motivo_idade = ifelse(motivo_indisp == 4, 1, ifelse(is.na(motivo_indisp), NA, 0)),
+           motivo_vontade = ifelse(motivo_indisp == 5, 1, ifelse(is.na(motivo_indisp), NA, 0))) %>% 
     #Separação das faixas etárias
     mutate(faixa_etaria = cut(idade, 
                               breaks=c(-Inf, 16, 18, 21, seq(25, 100, by = 5), Inf), 
