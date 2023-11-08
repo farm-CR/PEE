@@ -50,11 +50,8 @@ def resultado():
                     (
                         pd.read_csv(
                             csv_file, encoding = "latin", sep = ";",
-                            usecols = ["ANO_ELEICAO", "NR_TURNO", "CD_MUNICIPIO", "SG_UF", "DS_CARGO", "DS_SIT_TOT_TURNO", "NR_ZONA", "ST_VOTO_EM_TRANSITO", "QT_VOTOS_NOMINAIS"])
-                        .query("NR_TURNO == 2 and DS_CARGO == 'Presidente' and SG_UF != 'ZZ' and ST_VOTO_EM_TRANSITO == 'N'")
-                        .groupby(["ANO_ELEICAO", "NR_TURNO", "CD_MUNICIPIO", "SG_UF", "DS_CARGO", "DS_SIT_TOT_TURNO"])
-                        .agg({"QT_VOTOS_NOMINAIS": "sum"})
-                        .reset_index()
+                            usecols = ["ANO_ELEICAO", "NR_TURNO", "CD_MUNICIPIO", "SG_UF", "DS_CARGO", "DS_SIT_TOT_TURNO", "QT_VOTOS_NOMINAIS"])
+                        .query("NR_TURNO == 2 and DS_CARGO == 'Presidente' and SG_UF != 'ZZ'")
                         .to_csv(path_dados, index=False)
                     )
 

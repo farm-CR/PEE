@@ -66,13 +66,13 @@ save_pnad <- function(ano){
   df %>% 
     group_by(uf) %>% 
     summarize(across(!c(pesos, faixa_etaria), ~ weighted.mean(., pesos, na.rm = TRUE))) %>% 
-    write.csv("dados/pnad/uf_2022_3.csv")
+    write.csv(sprintf("dados/pnad/uf%s_3.csv", ano))
   
   #Dados agrupados por faixa etária (Regressão)
   df %>% 
     group_by(faixa_etaria, uf) %>% 
     summarize(across(!c(pesos), ~ weighted.mean(., pesos, na.rm = TRUE))) %>% 
-    write.csv("dados/pnad/idade_2022_3.csv")
+    write.csv(sprintf("dados/pnad/idade%s_3.csv", ano))
 }
 
 #Salvar dados para os três anos
