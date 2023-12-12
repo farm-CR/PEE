@@ -1,10 +1,12 @@
 library(tidyverse)
 library(sf)
 library(geobr)
+library(srvyr)
+library(PNADcIBGE)
 
 passe_livre <- read.csv("dados/passe_livre.csv")
 
-#Mapa dos grupos de munic�pio ----
+#Mapa dos grupos de município ----
 df <- passe_livre %>% 
   mutate(id_municipio = as.character(id_municipio)) %>% 
   left_join(df.rm.idd %>% 
@@ -16,16 +18,16 @@ df <- passe_livre %>%
 
 data <- left_join(municipios, df) %>% 
   mutate(fill = ifelse((passe_livre == 1 & area_metrop == 1), "Passe Livre", 
-                       ifelse(area_metrop == 1, "�rea Metropolitana", 
-                              ifelse((passe_livre == 1), "Passe Livre Fora da An�lise", "Fora da An�lise"))))
+                       ifelse(area_metrop == 1, "Área Metropolitana", 
+                              ifelse((passe_livre == 1), "Passe Livre Fora da Análise", "Fora da Análise"))))
 
 ggplot() +
   geom_sf(data = data %>% filter(turno == 2), 
           aes(fill = factor(fill)), color = NA) +
-  scale_fill_manual(values = c("�rea Metropolitana" = "#213A5C",
-                      "Passe Livre" = "red",
-                      "Passe Livre Fora da An�lise" = "#758D93",
-                      "Fora da An�lise" = "#90A4B0")) +
+  scale_fill_manual(values = c("Área Metropolitana" = "#213A5C",
+                               "Passe Livre" = "red",
+                               "Passe Livre Fora da Análise" = "#758D93",
+                               "Fora da Análise" = "#90A4B0")) +
   labs(fill = "Grupo") +
   theme_void()
 
@@ -34,21 +36,21 @@ ggsave("output/mapa.png", dpi = 1200, width = 10, height = 10)
 ggplot() +
   geom_sf(data = data %>% filter(turno == 2, abbrev_state == "RS"), 
           aes(fill = factor(fill)), color = "#8D989F") +
-  scale_fill_manual(values = c("�rea Metropolitana" = "#213A5C",
+  scale_fill_manual(values = c("Área Metropolitana" = "#213A5C",
                                "Passe Livre" = "#006600",
-                               "Passe Livre Fora da An�lise" = "#90A4B0",
-                               "Fora da An�lise" = "#758D93")) +
+                               "Passe Livre Fora da Análise" = "#90A4B0",
+                               "Fora da Análise" = "#758D93")) +
   labs(fill = "Grupo") +
   theme_void()
 
 ggsave("output/mapa_zoom.png", dpi = 600, width = 10, height = 10)
 
-#Pir�mide Et�ria ----
+#Pirâmide Etária ----
 
 df <- read.csv("output/data.csv")
 
 df %>% 
-  filter(faixa_etaria != "Inv�lido", ano == 2022) %>% 
+  filter(faixa_etaria != "Inválido", ano == 2022) %>% 
   group_by(ano, turno, faixa_etaria) %>% 
   summarize(aptos = sum(aptos), comparecimento = sum(comparecimento)) %>% 
   mutate(comparecimento = comparecimento/aptos,
@@ -66,7 +68,7 @@ ggsave("output/piramide.png", dpi = 600, height = 4, width = 5)
 
 piramide_bonus <- function(bonus){
   df %>% 
-    filter(faixa_etaria != "Inv�lido", ano == 2022, turno == 2) %>% 
+    filter(faixa_etaria != "Inválido", ano == 2022, turno == 2) %>% 
     group_by(ano, faixa_etaria) %>% 
     summarize(aptos = sum(aptos), comparecimento = sum(comparecimento)) %>% 
     mutate(comparecimento = comparecimento/aptos,
@@ -100,13 +102,13 @@ df.temp <- df %>%
   group_by(passe_livre) %>% 
   summarize(comparecimento = sum(comparecimento) / sum(aptos)) %>% 
   drop_na() %>% 
-  mutate(passe_livre = ifelse(passe_livre == 1, "Adotou", "N�o Adotou")) %>% 
+  mutate(passe_livre = ifelse(passe_livre == 1, "Adotou", "Não Adotou")) %>% 
   mutate(bonus = ifelse(passe_livre == "Adotou",max(comparecimento) - min(comparecimento), 0),
          comparecimento = min(comparecimento)) %>% 
   pivot_longer(cols = c(comparecimento, bonus))
 
 line1 <- df.temp %>% 
-  filter(passe_livre == "N�o Adotou") %>% 
+  filter(passe_livre == "Não Adotou") %>% 
   pull(value) %>% 
   max()
 
@@ -147,8 +149,8 @@ df %>%
   mutate(faixa_etaria = 
            fct_collapse(faixa_etaria,
                         idosos = c("100 anos ou mais", "95 a 99 anos", "90 a 94 anos", 
-                                          "85 a 89 anos", "80 a 84 anos", "75 a 79 anos", 
-                                          "70 a 74 anos", "65 a 69 anos", "60 a 64 anos"),
+                                   "85 a 89 anos", "80 a 84 anos", "75 a 79 anos", 
+                                   "70 a 74 anos", "65 a 69 anos", "60 a 64 anos"),
                         other_level = "nao_idosos")) %>% 
   filter(ano == 2022, turno == 2) %>% 
   group_by(id_municipio, faixa_etaria) %>% 
@@ -163,4 +165,48 @@ df %>%
   scale_fill_viridis_c()
 
 ggsave("output/mapa_dependencia.png", dpi = 1200, width = 10, height = 10)
+
+# ----
+pnad <- PNADcIBGE::get_pnadc(year = 2022, quarter = 3, design = TRUE) 
+
+df <- pnad %>% 
+  srvyr::as_survey(strata = stype) %>% 
+  srvyr::mutate(faixa_etaria = cut(V2009, 
+                                   breaks=c(-Inf, 16, 18, 21, seq(25, 100, by = 5), Inf), 
+                                   labels=c('menor',
+                                            '16 e 17 anos',
+                                            '18 a 20 anos',
+                                            '21 a 24 anos',
+                                            '25 a 29 anos',
+                                            '30 a 34 anos',
+                                            '35 a 39 anos',
+                                            '40 a 44 anos',
+                                            '45 a 49 anos',
+                                            '50 a 54 anos',
+                                            '55 a 59 anos',
+                                            '60 a 64 anos',
+                                            '65 a 69 anos',
+                                            '70 a 74 anos',
+                                            '75 a 79 anos',
+                                            '80 a 84 anos',
+                                            '85 a 89 anos',
+                                            '90 a 94 anos',
+                                            '95 a 99 anos',
+                                            '100 ou mais'))) %>% 
+  srvyr::filter(faixa_etaria != '100 ou mais', faixa_etaria != 'menor', faixa_etaria != '95 a 99 anos', faixa_etaria != '90 a 94 anos') %>% 
+  srvyr::group_by(faixa_etaria) %>% 
+  srvyr::summarise(salario_mediana = srvyr::survey_median(VD4019, na.rm = TRUE),
+                   salario_media = srvyr::survey_mean(VD4019, na.rm = TRUE))
+    
+df %>% 
+  mutate(ano = 2022) %>% 
+  ggplot(aes(y = faixa_etaria)) +
+  geom_col(aes(x = salario_media, fill = factor(ano))) +
+  geom_point(aes(x = salario_mediana), color = "white") +
+  facet_wrap(~ano) +
+  scale_fill_manual(values = c("2022" = "#46417D")) +
+  labs(x = "Salário médio (barra) e mediano (ponto)", y = "Faixa Etária")
+
+ggsave("output/salario.png", dpi = 600, height = 4, width = 5)
+
 
